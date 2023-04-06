@@ -21,40 +21,14 @@
 #include "IContentBrowserSingleton.h"
 #include "ContentBrowserModule.h"
 
-#include "Engine/TextureRenderTarget2D.h"
-
-
-#include "Rendering/SkeletalMeshModel.h"
 #include "Rendering/SkeletalMeshRenderData.h"
 
 #include "Engine/SkeletalMesh.h"
 #include "SkeletalRenderPublic.h"
-#include "Runtime/Engine/Private/SkeletalRenderCPUSkin.h"
 
 #include "Animation/MorphTarget.h"
-#include "VertexAnimProfile.h"
-
-#include "MeshDescriptionOperations.h"
-#include "UVMapSettings.h"
-#include "MeshAttributeArray.h"
-#include "MeshDescription.h"
-#include "MeshAttributes.h"
-
-
 #include "Animation/AnimSequence.h"
-
-#include "Misc/FeedbackContext.h"
-
-
-
-
-
-#include "IPersonaToolkit.h"
-#include "Rendering/SkeletalMeshModel.h"
 #include "Rendering/SkeletalMeshRenderData.h"
-
-#include "Animation/DebugSkelMeshComponent.h"
-
 
 #include "Textures/SlateIcon.h"
 #include "Styling/SlateTypes.h"
@@ -69,55 +43,28 @@
 
 #include "RawMesh.h"
 #include "StaticMeshResources.h"
-#include "MeshBuild.h"
-
-#include "Rendering/SkeletalMeshModel.h"
 #include "Rendering/SkeletalMeshRenderData.h"
 
 #include "Engine/SkeletalMesh.h"
-#include "SkeletalRenderPublic.h"
-#include "Runtime/Engine/Private/SkeletalRenderCPUSkin.h"
-
 #include "Animation/MorphTarget.h"
 
 #include "Developer/AssetTools/Public/IAssetTools.h"
 #include "Developer/AssetTools/Public/AssetToolsModule.h"
-
-#include "Toolkits/AssetEditorManager.h"
 #include "Dialogs/DlgPickAssetPath.h"
 #include "AssetRegistryModule.h"
 
-#include "VertexAnimProfile.h"
-
-
 #include "Framework/Notifications/NotificationManager.h"
 #include "Widgets/Notifications/SNotificationList.h"
-
-#include "Engine.h"
-
-#include "Misc/FeedbackContext.h"
 #include "Misc/MessageDialog.h"
 
-#include "IPersonaPreviewScene.h"
-#include "AssetViewerSettings.h"
 #include "RenderingThread.h"
 
-#include "Components/PoseableMeshComponent.h"
-
-#include "AnimationRuntime.h"
-
 //--------------------------------------
-#include "Interfaces/IPluginManager.h"
 #include "Misc/Paths.h"
 #include "ShaderCore.h"
 
-#include "VertexAnimUtils.h"
 
 #include "Animation/AnimSequence.h"
-
-#include "Kismet/KismetRenderingLibrary.h"
-
-#include "PackageTools.h"
 
 #include "Animation/AnimSequence.h"
 
@@ -126,14 +73,9 @@
 
 #include "Misc/App.h"
 #include "RenderingThread.h"
-#include "GameFramework/PlayerController.h"
-#include "ContentStreaming.h"
 #include "DrawDebugHelpers.h"
 #include "UnrealEngine.h"
-#include "SkeletalRenderPublic.h"
-
 #include "Animation/AnimStats.h"
-#include "Engine/SkeletalMeshSocket.h"
 #include "PhysicsEngine/PhysicsAsset.h"
 #include "EngineGlobals.h"
 #include "PrimitiveSceneProxy.h"
@@ -141,10 +83,6 @@
 #include "Rendering/SkinWeightVertexBuffer.h"
 #include "SkeletalMeshTypes.h"
 #include "Animation/MorphTarget.h"
-#include "AnimationRuntime.h"
-
-#include "Animation/AnimSingleNodeInstance.h"
-
 
 #define LOCTEXT_NAMESPACE "PickAssetDialog"
 
@@ -336,7 +274,9 @@ static void SkinnedMeshToRawMeshes(USkinnedMeshComponent* InSkinnedMeshComponent
 		// Copy skinned vertex positions
 		for (int32 VertIndex = 0; VertIndex < FinalVertices.Num(); ++VertIndex)
 		{
-			RawMesh.VertexPositions.Add(InComponentToWorld.TransformPosition(FinalVertices[VertIndex].Position));
+			const FVector4d TransformedPosition = InComponentToWorld.TransformPosition(FVector4d(FinalVertices[VertIndex].Position.X, FinalVertices[VertIndex].Position.Y, 
+				FinalVertices[VertIndex].Position.Z, 0));
+			RawMesh.VertexPositions.Add(FVector3f(TransformedPosition.X, TransformedPosition.Y, TransformedPosition.Z));
 		}
 
 		const uint32 NumTexCoords = FMath::Min(LODData.StaticVertexBuffers.StaticMeshVertexBuffer.GetNumTexCoords(), (uint32)MAX_MESH_TEXTURE_COORDS);
@@ -357,14 +297,14 @@ static void SkinnedMeshToRawMeshes(USkinnedMeshComponent* InSkinnedMeshComponent
 					RawMesh.WedgeIndices.Add(BaseVertexIndex + VertexIndexForWedge);
 
 					const FFinalSkinVertex& SkinnedVertex = FinalVertices[VertexIndexForWedge];
-					const FVector TangentX = InComponentToWorld.TransformVector(SkinnedVertex.TangentX.ToFVector());
-					const FVector TangentZ = InComponentToWorld.TransformVector(SkinnedVertex.TangentZ.ToFVector());
+					const FVector4 TangentX = InComponentToWorld.TransformFVector4(SkinnedVertex.TangentX.ToFVector4());
+					const FVector4 TangentZ = InComponentToWorld.TransformFVector4(SkinnedVertex.TangentZ.ToFVector4());
 					const FVector4 UnpackedTangentZ = SkinnedVertex.TangentZ.ToFVector4();
-					const FVector TangentY = (TangentZ ^ TangentX).GetSafeNormal() * UnpackedTangentZ.W;
+					const FVector4 TangentY = (TangentZ ^ TangentX).GetSafeNormal() * UnpackedTangentZ.W;
 
-					RawMesh.WedgeTangentX.Add(TangentX);
-					RawMesh.WedgeTangentY.Add(TangentY);
-					RawMesh.WedgeTangentZ.Add(TangentZ);
+					RawMesh.WedgeTangentX.Add(FVector3f(TangentX.X, TangentX.Y, TangentX.Z));
+					RawMesh.WedgeTangentY.Add(FVector3f(TangentY.X, TangentY.Y, TangentY.Z));
+					RawMesh.WedgeTangentZ.Add(FVector3f(TangentZ.X, TangentZ.Y, TangentZ.Z));
 
 					for (uint32 TexCoordIndex = 0; TexCoordIndex < MAX_MESH_TEXTURE_COORDS; TexCoordIndex++)
 					{
@@ -474,7 +414,7 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 			}
 			else if (false)//(IsValidStaticMeshComponent(StaticMeshComponent))
 			{
-				OverallMaxLODs = FMath::Max(StaticMeshComponent->GetStaticMesh()->RenderData->LODResources.Num(), OverallMaxLODs);
+				OverallMaxLODs = FMath::Max(StaticMeshComponent->GetStaticMesh()->GetRenderData()->LODResources.Num(), OverallMaxLODs);
 			}
 		}
 
@@ -545,8 +485,7 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 			// Create StaticMesh object
 			StaticMesh = NewObject<UStaticMesh>(Package, *MeshName, RF_Public | RF_Standalone);
 			StaticMesh->InitResources();
-
-			StaticMesh->LightingGuid = FGuid::NewGuid();
+			StaticMesh->SetLightingGuid(FGuid::NewGuid());
 
 			// Determine which texture coordinate map should be used for storing/generating the lightmap UVs
 			const uint32 LightMapIndex = FMath::Min(MaxInUseTextureCoordinate + 1, (uint32)MAX_MESH_TEXTURE_COORDS - 1);
@@ -572,7 +511,7 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 			// Copy materials to new mesh 
 			for (UMaterialInterface* Material : Materials)
 			{
-				StaticMesh->StaticMaterials.Add(FStaticMaterial(Material));
+				StaticMesh->GetStaticMaterials().Add(FStaticMaterial(Material));
 			}
 
 			//Set the Imported version before calling the build
@@ -631,7 +570,7 @@ UStaticMesh* FVertexAnimUtils::ConvertMeshesToStaticMesh(const TArray<UMeshCompo
 
 
 
-void FVertexAnimUtils::VATUVsToStaticMeshLODs(UStaticMesh* StaticMesh, const int32 UVChannel, const TArray<TArray<FVector2D>>& UVs)
+void FVertexAnimUtils::VATUVsToStaticMeshLODs(UStaticMesh* StaticMesh, const int32 UVChannel, const TArray<TArray<FVector2f>>& UVs)
 {
 	for (int32 LOD = 0; LOD < StaticMesh->GetNumLODs(); LOD++)
 	{
@@ -650,7 +589,7 @@ void FVertexAnimUtils::VATUVsToStaticMeshLODs(UStaticMesh* StaticMesh, const int
 				for (int32 WedgeIndex = 0; WedgeIndex < Mesh.WedgeIndices.Num(); ++WedgeIndex)
 				{
 					int32 VertID = Mesh.WedgeIndices[WedgeIndex];
-					FVector Position = Mesh.VertexPositions[VertID];
+					FVector3f Position = Mesh.VertexPositions[VertID];
 
 					for (uint32 TexCoordIndex = 0; TexCoordIndex < MAX_MESH_TEXTURE_COORDS; TexCoordIndex++)
 					{
@@ -725,7 +664,7 @@ void FVertexAnimUtils::VATColorsToStaticMeshLODs(UStaticMesh* StaticMesh, const 
 				for (int32 WedgeIndex = 0; WedgeIndex < Mesh.WedgeIndices.Num(); ++WedgeIndex)
 				{
 					int32 VertID = Mesh.WedgeIndices[WedgeIndex];
-					FVector Position = Mesh.VertexPositions[VertID];
+					FVector3f Position = Mesh.VertexPositions[VertID];
 					Mesh.WedgeColors[WedgeIndex] = Colors[PaintingMeshLODIndex][VertID];
 				}
 

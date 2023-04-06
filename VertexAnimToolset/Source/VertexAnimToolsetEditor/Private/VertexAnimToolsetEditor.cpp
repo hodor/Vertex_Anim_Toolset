@@ -3,7 +3,6 @@
 #include "VertexAnimToolsetEditor.h"
 
 #include "IPersonaToolkit.h"
-#include "Rendering/SkeletalMeshModel.h"
 #include "Rendering/SkeletalMeshRenderData.h"
 
 #include "Animation/DebugSkelMeshComponent.h"
@@ -18,60 +17,23 @@
 
 #include "Engine/StaticMesh.h"
 #include "Materials/Material.h"
-#include "Materials/MaterialInstanceDynamic.h"
 
-#include "RawMesh.h"
 #include "StaticMeshResources.h"
-#include "MeshBuild.h"
-
-#include "Rendering/SkeletalMeshModel.h"
 #include "Rendering/SkeletalMeshRenderData.h"
 
 #include "Engine/SkeletalMesh.h"
-#include "SkeletalRenderPublic.h"
-#include "Runtime/Engine/Private/SkeletalRenderCPUSkin.h"
-
 #include "Animation/MorphTarget.h"
-
-#include "Developer/AssetTools/Public/IAssetTools.h"
-#include "Developer/AssetTools/Public/AssetToolsModule.h"
-
-#include "Toolkits/AssetEditorManager.h"
-#include "Dialogs/DlgPickAssetPath.h"
-#include "AssetRegistryModule.h"
-
-#include "VertexAnimUtils.h"
-#include "VertexAnimProfile.h"
-
-
-#include "Framework/Notifications/NotificationManager.h"
-#include "Widgets/Notifications/SNotificationList.h"
-
-//#include "Engine.h"
-
-#include "Misc/FeedbackContext.h"
 #include "Misc/MessageDialog.h"
 
 #include "IPersonaPreviewScene.h"
-#include "AssetViewerSettings.h"
+
 #include "RenderingThread.h"
 
-#include "Components/PoseableMeshComponent.h"
-
-#include "AnimationRuntime.h"
-
 //--------------------------------------
-#include "Interfaces/IPluginManager.h"
 #include "Misc/Paths.h"
 #include "ShaderCore.h"
 
 #include "Animation/AnimSequence.h"
-
-//#include "Runtime/Engine/Classes/Kismet/KismetRenderingLibrary.h"
-
-#include "Kismet/KismetRenderingLibrary.h"
-
-#include "PackageTools.h"
 
 #include "VATEditorUtils.h"
 
